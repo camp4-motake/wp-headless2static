@@ -1,3 +1,5 @@
+const redact = (url: string) => url.replace(/([?&]token=)[^&]+/g, '$1***');
+
 export class WpClientError extends Error {
 	constructor(
 		message: string,
@@ -31,7 +33,7 @@ export async function fetchJsonWithRetry<T>(url: string, opts: RetryOptions = {}
 			if (res.ok) {
 				return (await res.json()) as T;
 			}
-			const err = new WpClientError(`HTTP ${res.status} for ${url}`, url, res.status);
+			const err = new WpClientError(`HTTP ${res.status} for ${redact(url)}`, url, res.status);
 			if (res.status >= 400 && res.status < 500) {
 				throw err; // client errors are not retryable
 			}
@@ -40,8 +42,8 @@ export async function fetchJsonWithRetry<T>(url: string, opts: RetryOptions = {}
 			if (e instanceof WpClientError && e.status !== null && e.status < 500) {
 				throw e;
 			}
-			lastError = e instanceof WpClientError ? e : new WpClientError(`network error for ${url}: ${String(e)}`, url, null);
+			lastError = e instanceof WpClientError ? e : new WpClientError(`network error for ${redact(url)}: ${String(e)}`, url, null);
 		}
 	}
-	throw lastError ?? new WpClientError(`unreachable: ${url}`, url, null);
+	throw lastError ?? new WpClientError(`unreachable: ${redact(url)}`, url, null);
 }

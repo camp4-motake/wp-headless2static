@@ -49,4 +49,11 @@ describe('fetchJsonWithRetry', () => {
 		await fetchJsonWithRetry('http://x/y', { fetchFn, sleepFn: async (ms) => void delays.push(ms) }).catch(() => {});
 		expect(delays).toEqual([250, 1000]);
 	});
+
+	it('redacts token values in error messages', async () => {
+		const fetchFn = vi.fn(async () => new Response('nope', { status: 404 }));
+		const err = await fetchJsonWithRetry('http://x/y?token=secret123', { fetchFn, sleepFn: noSleep }).catch((e) => e);
+		expect(err.message).not.toContain('secret123');
+		expect(err.message).toContain('token=***');
+	});
 });
