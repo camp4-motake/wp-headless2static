@@ -1,0 +1,19 @@
+{
+  "name": "site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@repo/shared": "workspace:*",
+    "@repo/wp-client": "workspace:*",
+    "astro": "^5.0.0"
+  },
+  "devDependencies": {
+    "@astrojs/cloudflare": "^12.0.0",
+    "typescript": "^5.7.0"
+  }
+}
