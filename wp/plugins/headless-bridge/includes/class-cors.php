@@ -11,13 +11,23 @@ class Cors {
 	}
 
 	public static function send_headers( $served ) {
+		header( 'Vary: Origin' );
 		$origin  = get_http_origin();
-		$allowed = Plugin::frontend_url();
-		if ( $origin && $allowed && rtrim( $origin, '/' ) === $allowed ) {
-			header( 'Access-Control-Allow-Origin: ' . esc_url_raw( $origin ) );
+		$allowed = self::origin_of( Plugin::frontend_url() );
+		if ( $origin && $allowed && self::origin_of( $origin ) === $allowed ) {
+			header( 'Access-Control-Allow-Origin: ' . $origin );
 			header( 'Access-Control-Allow-Methods: GET, OPTIONS' );
-			header( 'Vary: Origin' );
 		}
 		return $served;
+	}
+
+	/** Reduces a URL to scheme://host[:port] so a configured path can't silently break matching. */
+	private static function origin_of( string $url ): string {
+		$parts = wp_parse_url( $url );
+		if ( empty( $parts['scheme'] ) || empty( $parts['host'] ) ) {
+			return '';
+		}
+		$origin = strtolower( $parts['scheme'] . '://' . $parts['host'] );
+		return isset( $parts['port'] ) ? $origin . ':' . $parts['port'] : $origin;
 	}
 }

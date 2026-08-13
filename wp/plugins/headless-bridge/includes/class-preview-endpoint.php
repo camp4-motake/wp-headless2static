@@ -33,7 +33,7 @@ class Preview_Endpoint {
 
 	public static function handle( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
 		$post = get_post( (int) $request['id'] );
-		if ( ! $post || 'revision' === $post->post_type ) {
+		if ( ! $post || 'revision' === $post->post_type || 'trash' === $post->post_status ) {
 			return new \WP_Error( 'not_found', 'Post not found.', [ 'status' => 404 ] );
 		}
 
@@ -52,11 +52,16 @@ class Preview_Endpoint {
 			];
 		}
 
+		$GLOBALS['post'] = $source;
+		setup_postdata( $source );
+		$content = apply_filters( 'the_content', $source->post_content );
+		wp_reset_postdata();
+
 		return new \WP_REST_Response( [
 			'id'             => $post->ID,
 			'type'           => $post->post_type,
 			'title'          => get_the_title( $source ),
-			'content'        => apply_filters( 'the_content', $source->post_content ),
+			'content'        => $content,
 			'excerpt'        => $source->post_excerpt,
 			'date'           => $post->post_date_gmt,
 			'modified'       => $source->post_modified_gmt,
