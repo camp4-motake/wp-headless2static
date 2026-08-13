@@ -1,7 +1,7 @@
 {
   "core": null,
   "phpVersion": "8.2",
-  "plugins": [ "./plugins/headless-bridge" ],
+  "plugins": [ "./plugins/headless-bridge", "./plugins/site-config" ],
   "themes": [ "./themes/headless-minimal" ],
   "port": 8888,
   "config": {
