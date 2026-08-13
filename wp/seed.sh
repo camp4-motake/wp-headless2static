@@ -7,7 +7,7 @@ cli() { wp-env run cli wp "$@"; }
 echo "Seeding options..."
 cli option update headless_bridge_frontend_url "http://localhost:4321"
 cli option update blogname "Headless Demo"
-cli theme activate headless-minimal || true
+cli theme activate headless-minimal
 cli rewrite structure '/%postname%/' --hard
 
 echo "Seeding taxonomy..."
