@@ -32,32 +32,7 @@ async function load(): Promise<SiteContent> {
 	}
 }
 
-async function loadSafe(): Promise<SiteContent> {
-	try {
-		await wp.health();
-	} catch (e) {
-		console.error(`\nビルド中止: WordPress に接続できません (${WP_API_URL})`);
-		console.error('確認: WP が起動しているか / WP_API_URL が正しいか / headless-bridge プラグインが有効か');
-		console.error(String(e));
-		process.exit(1);
-	}
-	try {
-		const [posts, pages] = await Promise.all([wp.getAllPosts(), wp.getAllPages()]);
-		let works: SiteContent['works'] = [];
-		try {
-			works = await wp.getAllWorks();
-		} catch (e) {
-			console.warn('⚠ 警告: works エンドポイントが利用できません (無視して続行)');
-		}
-		return { posts, pages, works };
-	} catch (e) {
-		console.error('\nビルド中止: コンテンツ取得に失敗しました(不完全なサイトはデプロイしない方針のため失敗させます)');
-		console.error(e instanceof WpClientError ? `${e.message}` : String(e));
-		process.exit(1);
-	}
-}
-
 export function loadContent(): Promise<SiteContent> {
-	cache ??= loadSafe();
+	cache ??= load();
 	return cache;
 }
