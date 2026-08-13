@@ -68,7 +68,7 @@ cp .env.example .env
 |---|---|
 | `WP_API_URL` | WordPress REST API のベース URL(ローカル wp-env / レンタルサーバー / 任意の環境を指定) |
 | `PREVIEW_MODE` | `shell`(静的シェル + JS。どこでも動く)または `ssr`(Cloudflare Workers)。デフォルトは `shell` |
-| `NO_CACHE` | `1` を指定するとコンテンツ取得・Astro のビルドキャッシュを無効化し、常にフル取得・フルビルドを行う |
+| `NO_CACHE` | `1` を指定するとコンテンツ取得キャッシュを無効化し、常にフル取得を行う(Astro 側のビルドキャッシュには影響しない) |
 
 重要な注意点として、`PREVIEW_MODE` は単なる実行時フラグではなく **Astro のアダプタ切替そのもの** に効きます。`apps/site/astro.config.mjs` はビルド設定を評価する時点(Vite の環境変数注入より前)でリポジトリルートの `.env` を先読みし、`PREVIEW_MODE=ssr` なら `@astrojs/cloudflare` アダプタを、それ以外なら静的出力を選択します。つまり `PREVIEW_MODE` を変えて `pnpm build` をやり直すと、生成される `dist/` の構造自体が変わります(後述)。
 
@@ -111,10 +111,16 @@ register_post_meta( 'work', 'client_name', [
 1. WordPress からのコンテンツ取得キャッシュ(`modified` 日時での差分取得)
 2. Astro 自体のビルドキャッシュ
 
-挙動が怪しいとき・キャッシュが原因かもしれないと疑ったときは、キャッシュを無効化してフル取得・フルビルドしてください。
+挙動が怪しいとき・コンテンツ取得キャッシュが原因かもしれないと疑ったときは、`NO_CACHE=1` を付けてフル取得させてください。
 
 ```bash
 NO_CACHE=1 pnpm build
+```
+
+`NO_CACHE=1` が無効化するのはコンテンツ取得キャッシュのみで、Astro 側のビルドキャッシュ(`.cache/astro`)には影響しません。Astro 側も含めて完全にリセットしたい場合は、`.cache/` ディレクトリごと削除してください。
+
+```bash
+rm -rf .cache
 ```
 
 なお、キャッシュの内部形式を変更するようなアップデートを取り込んだ場合は `CACHE_VERSION` の値がコード側で更新され、古い形式のキャッシュは自動的に全破棄される仕組みになっています。手動でキャッシュ形式の互換性を気にする必要はありません。
@@ -129,7 +135,7 @@ WordPress で投稿を公開・更新・削除すると、自動的に GitHub Ac
 2. **GitHub Repository** に `owner/repo` 形式でリポジトリを指定
 3. **GitHub Token** に fine-grained PAT(パーソナルアクセストークン)を設定。このトークンは **対象リポジトリの `repository_dispatch` イベント送信のみ** を許可したスコープの狭いものにしてください(それ以上の権限は不要です)
 
-投稿の公開・更新・削除をトリガーに GitHub へ `repository_dispatch` が送られ、`.github/workflows/build-deploy.yml` のワークフローが起動してビルド・デプロイが実行されます。GitHub Repository / GitHub Token のどちらかが未設定の場合は webhook 送信自体がスキップされるため、Actions の `workflow_dispatch` からの手動起動と併用できます。
+投稿の公開・更新・削除をトリガーに GitHub へ `repository_dispatch` が送られ、`.github/workflows/build-deploy.yml` のワークフローが起動してビルド・デプロイが実行されます。GitHub Repository / GitHub Token のどちらかが未設定の場合は webhook 送信自体がスキップされます。設定の有無にかかわらず、Actions の `workflow_dispatch` からの手動起動はいつでも利用できます。
 
 ビルド起動(GitHub API へのリクエスト)が失敗した場合は、WordPress 管理画面に「ビルドの起動に失敗しました」という通知が表示されます。公開したはずの内容がサイトに反映されていないと感じたら、まずこの通知の有無を確認してください。
 
