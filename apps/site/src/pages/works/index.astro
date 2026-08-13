@@ -1,0 +1,17 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { loadContent } from '../../lib/content';
+
+export const prerender = true;
+
+const { works } = await loadContent();
+---
+
+<BaseLayout title="Works">
+	<h1>実績</h1>
+	<ul class="post-list">
+		{works.map((work) => (
+			<li><a href={`/works/${work.slug}/`} set:html={work.title} /></li>
+		))}
+	</ul>
+</BaseLayout>

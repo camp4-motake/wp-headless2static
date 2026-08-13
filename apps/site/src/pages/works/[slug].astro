@@ -1,0 +1,20 @@
+---
+import { renderWorkMeta } from '@repo/shared';
+import ArticleLayout from '../../layouts/ArticleLayout.astro';
+import { loadContent } from '../../lib/content';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+	const { works } = await loadContent();
+	return works.map((work) => ({ params: { slug: work.slug }, props: { work } }));
+}
+
+const { work } = Astro.props;
+const metaHtml = renderWorkMeta(work.meta);
+---
+
+<ArticleLayout title={work.title} dateISO={work.date}>
+	<Fragment set:html={metaHtml} />
+	<Fragment set:html={work.content} />
+</ArticleLayout>

@@ -1,0 +1,17 @@
+---
+import ArticleLayout from '../layouts/ArticleLayout.astro';
+import { loadContent } from '../lib/content';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+	const { pages } = await loadContent();
+	return pages.map((page) => ({ params: { slug: page.slug }, props: { page } }));
+}
+
+const { page } = Astro.props;
+---
+
+<ArticleLayout title={page.title}>
+	<Fragment set:html={page.content} />
+</ArticleLayout>
