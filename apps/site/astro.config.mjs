@@ -17,28 +17,27 @@ for (const [key, value] of Object.entries(fileEnv)) {
 
 const PREVIEW_MODE = process.env.PREVIEW_MODE ?? 'shell';
 
-// @astrojs/cloudflare pulls in `wrangler`, which — merely by being imported,
-// no CLI command or API call required — detects HTTP_PROXY/HTTPS_PROXY and
-// installs a global undici dispatcher (`setGlobalDispatcher(new ProxyAgent(...))`)
-// that routes ALL subsequent fetch() calls in this Node process through that
-// proxy, ignoring NO_PROXY entirely. That breaks our own WP_API_URL fetches
-// (typically http://localhost:8888) during prerendering in ssr mode, since a
-// dev/CI proxy set up for genuine outbound traffic doesn't allow localhost.
-// Hiding the proxy env vars for the moment of the import keeps wrangler from
-// touching the dispatcher at all, so Node's own built-in proxy handling
-// (NODE_USE_ENV_PROXY, which does honor NO_PROXY) is left in place.
+// Astro 7 changed the default `compressHTML` from `true` (HTML-aware
+// compression) to `'jsx'` (JSX-style whitespace stripping), which removes
+// meaningful inline whitespace — e.g. the space between a post title link and
+// its <time> on the list pages. Pin the pre-v7 behavior to keep the rendered
+// HTML unchanged.
+const compressHTML = true;
+
+// A proxy-env workaround used to live here: importing `@astrojs/cloudflare`
+// pulled in `wrangler`, whose module init replaced undici's global dispatcher
+// with a `ProxyAgent` that ignored NO_PROXY, breaking WP_API_URL fetches to
+// localhost during ssr-mode prerendering when HTTP(S)_PROXY was set. That is
+// fixed upstream: wrangler now installs an `EnvHttpProxyAgent` that honors
+// NO_PROXY and excludes localhost by default
+// (`noProxy || 'localhost,127.0.0.1,::1'`), and since @astrojs/cloudflare v13
+// prerendering runs inside workerd, whose fetch() never goes through Node's
+// undici dispatcher anyway. Verified with @astrojs/cloudflare 14.2.1 +
+// wrangler 4.122.0: an ssr build with HTTP(S)_PROXY set succeeds without the
+// workaround. The import stays lazy so shell-mode builds never load wrangler.
 async function loadCloudflareAdapter() {
-	const proxyVars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy'];
-	const saved = Object.fromEntries(proxyVars.map((key) => [key, process.env[key]]));
-	for (const key of proxyVars) delete process.env[key];
-	try {
-		const { default: cloudflare } = await import('@astrojs/cloudflare');
-		return cloudflare();
-	} finally {
-		for (const key of proxyVars) {
-			if (saved[key] !== undefined) process.env[key] = saved[key];
-		}
-	}
+	const { default: cloudflare } = await import('@astrojs/cloudflare');
+	return cloudflare();
 }
 
 export default defineConfig(
@@ -46,8 +45,10 @@ export default defineConfig(
 		? {
 				output: 'server',
 				adapter: await loadCloudflareAdapter(),
+				compressHTML,
 			}
 		: {
 				output: 'static',
+				compressHTML,
 			},
 );
