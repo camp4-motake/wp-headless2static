@@ -5,6 +5,7 @@ cd "$(dirname "$0")/../.."
 DIST="apps/site/dist"
 CONFIG="${DEPLOY_CONFIG:-tools/deploy/deploy.config}"
 DRY_RUN=0
+[ "${1:-}" = "--" ] && shift
 [ "${1:-}" = "--dry-run" ] && DRY_RUN=1
 
 [ -f "$CONFIG" ] || { echo "設定ファイルがありません: $CONFIG (deploy.config.example をコピーしてください)"; exit 1; }
