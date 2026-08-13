@@ -1,5 +1,4 @@
 import type { Page, Post, Work } from '@repo/shared';
-import { resolve } from 'node:path';
 import { WpClientError, createCachedContent, createWpClient, mapPage, mapPost, mapWork } from '@repo/wp-client';
 
 export const WP_API_URL = (process.env.WP_API_URL ?? 'http://localhost:8888').replace(/\/$/, '');
@@ -16,8 +15,12 @@ let cache: Promise<SiteContent> | null = null;
 
 // NOTE: import.meta.url is unreliable here — its depth differs between `astro dev`
 // (unbundled source path) and `astro build` (dist/.prerender/chunks). Astro always
-// runs with cwd = apps/site (pnpm --filter site …), so resolve from cwd instead.
-const repoRoot = resolve(process.cwd(), '../..');
+// runs with cwd = apps/site (pnpm --filter site …), so derive from cwd instead.
+// Plain string concat (no node:path) keeps this module loadable inside workerd,
+// where the cache layer falls back to full fetch anyway. workerd's process shim
+// has env but no cwd(), so guard it — the placeholder path is never dereferenced
+// there because the fs import inside the cache is what fails first.
+const repoRoot = typeof process.cwd === 'function' ? `${process.cwd()}/../..` : '.';
 
 const cached = createCachedContent({
 	client: wp,

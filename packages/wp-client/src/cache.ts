@@ -1,5 +1,3 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import type { WpClient } from './client.ts';
 import type { WpRestPost } from './map.ts';
 
@@ -31,6 +29,14 @@ export function createCachedContent({ client, cacheDir, disabled = false, log }:
 			return (await FULL[type](client)) as T[];
 		}
 		try {
+			// node builtins are imported lazily: this module gets bundled into the
+			// Cloudflare worker in ssr mode (prerendering runs inside workerd), where
+			// a static `import 'node:fs'` fails at module instantiation. A dynamic
+			// import instead rejects here at call time and lands in the fallback below.
+			const [{ existsSync, mkdirSync, readFileSync, writeFileSync }, { join }] = await Promise.all([
+				import('node:fs'),
+				import('node:path'),
+			]);
 			const file = join(cacheDir, `${type}.json`);
 			let cache: CacheFile = { version: CACHE_VERSION, items: {} };
 			if (existsSync(file)) {

@@ -100,4 +100,27 @@ describe('createCachedContent', () => {
 		const out = await cached.load('posts', mapPost);
 		expect(out.map((p) => p.id)).toEqual([2, 1, 3]);
 	});
+
+	it('falls back to full fetch when node builtins are unavailable (workerd)', async () => {
+		const { client, calls } = setup(new Map([[1, 'a']]));
+		freshDir();
+		vi.resetModules();
+		vi.doMock('node:fs', () => {
+			throw new Error('No such module "node:fs"');
+		});
+		vi.doMock('node:path', () => {
+			throw new Error('No such module "node:path"');
+		});
+		try {
+			const { createCachedContent: create } = await import('../src/cache.ts');
+			const cached = create({ client, cacheDir: '/nowhere' });
+			const out = await cached.load('posts', mapPost);
+			expect(out).toHaveLength(1);
+			expect(calls.filter((u) => u.includes('_fields'))).toHaveLength(0);
+		} finally {
+			vi.doUnmock('node:fs');
+			vi.doUnmock('node:path');
+			vi.resetModules();
+		}
+	});
 });
