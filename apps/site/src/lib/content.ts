@@ -18,7 +18,7 @@ const repoRoot = fileURLToPath(new URL('../../../../../', import.meta.url));
 
 const cached = createCachedContent({
 	client: wp,
-	cacheDir: `${repoRoot.replace(/\/$/, '')}/.cache/content`,
+	cacheDir: `${repoRoot}/.cache/content`,
 	disabled: process.env.NO_CACHE === '1',
 	log: (type, reused, fetched) => console.log(`content cache [${type}]: ${reused} reused, ${fetched} fetched`),
 });
