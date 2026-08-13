@@ -46,9 +46,11 @@ export default defineConfig(
 				output: 'server',
 				adapter: await loadCloudflareAdapter(),
 				compressHTML,
+				cacheDir: new URL('../../.cache/astro', import.meta.url).pathname,
 			}
 		: {
 				output: 'static',
 				compressHTML,
+				cacheDir: new URL('../../.cache/astro', import.meta.url).pathname,
 			},
 );

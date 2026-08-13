@@ -1,5 +1,6 @@
 import type { Page, Post, Work } from '@repo/shared';
-import { WpClientError, createWpClient } from '@repo/wp-client';
+import { fileURLToPath } from 'node:url';
+import { WpClientError, createCachedContent, createWpClient, mapPage, mapPost, mapWork } from '@repo/wp-client';
 
 export const WP_API_URL = (process.env.WP_API_URL ?? 'http://localhost:8888').replace(/\/$/, '');
 
@@ -13,6 +14,15 @@ export interface SiteContent {
 
 let cache: Promise<SiteContent> | null = null;
 
+const repoRoot = fileURLToPath(new URL('../../../../../', import.meta.url));
+
+const cached = createCachedContent({
+	client: wp,
+	cacheDir: `${repoRoot.replace(/\/$/, '')}/.cache/content`,
+	disabled: process.env.NO_CACHE === '1',
+	log: (type, reused, fetched) => console.log(`content cache [${type}]: ${reused} reused, ${fetched} fetched`),
+});
+
 async function load(): Promise<SiteContent> {
 	try {
 		await wp.health();
@@ -23,7 +33,11 @@ async function load(): Promise<SiteContent> {
 		process.exit(1);
 	}
 	try {
-		const [posts, pages, works] = await Promise.all([wp.getAllPosts(), wp.getAllPages(), wp.getAllWorks()]);
+		const [posts, pages, works] = await Promise.all([
+			cached.load('posts', mapPost),
+			cached.load('pages', mapPage),
+			cached.load('works', mapWork),
+		]);
 		return { posts, pages, works };
 	} catch (e) {
 		console.error('\nビルド中止: コンテンツ取得に失敗しました(不完全なサイトはデプロイしない方針のため失敗させます)');
