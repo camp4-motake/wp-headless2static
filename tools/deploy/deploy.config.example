@@ -1,0 +1,20 @@
+# コピーして tools/deploy/deploy.config を作成(gitignore 済み)
+DEPLOY_TARGET=rental            # rental | cloudflare
+DEPLOY_METHOD=rsync             # rsync | lftp (rental のみ)
+
+# --- rental (rsync over SSH) ---
+RENTAL_HOST=example.jp
+RENTAL_USER=youruser
+RENTAL_PATH=/home/youruser/example.jp/public_html
+RENTAL_PORT=22
+# WP 同居時(パターン①)は wp/ と .htaccess を必ず exclude に残すこと
+RSYNC_EXCLUDES="wp/ .htaccess"
+
+# --- rental (lftp / FTPS: SSH 非対応サーバー向け) ---
+FTP_HOST=ftp.example.jp
+FTP_USER=youruser
+# パスワードは環境変数 FTP_PASSWORD で渡す(このファイルに書かない)
+
+# --- cloudflare ---
+CF_PAGES_PROJECT=your-project   # shell モード(静的)の Pages プロジェクト名
+# 認証は環境変数 CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID で渡す

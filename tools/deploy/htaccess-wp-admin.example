@@ -1,0 +1,12 @@
+# WP 側 .htaccess に追記する雛形:
+# 管理画面(/wp-admin, wp-login.php)のみ Basic 認証、REST API は素通し。
+# .htpasswd は各サーバーの案内に従って生成すること。
+<IfModule mod_setenvif.c>
+	SetEnvIf Request_URI "^/wp-json/" allow_rest
+</IfModule>
+<FilesMatch "wp-login\.php">
+	AuthType Basic
+	AuthName "Restricted"
+	AuthUserFile /home/youruser/.htpasswd
+	Require valid-user
+</FilesMatch>

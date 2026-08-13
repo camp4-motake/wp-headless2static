@@ -171,7 +171,7 @@ WP の場所と静的サイトのデプロイ先は完全に独立。つなが�
 pnpm bootstrap  # 初回のみ: wp-env 起動 + シード投入
 pnpm dev        # Astro dev サーバー起動(WP_API_URL=http://localhost:8888)
 pnpm build      # 本番ビルド(WP_API_URL は .env に従う)
-pnpm deploy     # tools/deploy 経由でデプロイ(手動ルート)
+pnpm site:deploy # tools/deploy 経由でデプロイ(手動ルート)
 ```
 
 - `WP_API_URL` を本番 WP に向ければ実データでのデザイン確認も可能(読み取りのみで安全)

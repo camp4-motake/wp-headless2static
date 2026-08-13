@@ -12,6 +12,7 @@
     "dev": "pnpm --filter site dev",
     "build": "pnpm --filter site build",
     "site:preview": "pnpm --filter site preview",
+    "site:deploy": "bash tools/deploy/deploy.sh",
     "e2e": "pnpm --filter site e2e"
   },
   "devDependencies": {
