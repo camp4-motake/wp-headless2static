@@ -37,7 +37,10 @@ echo "   OK"
 
 echo "6) cors denies other origins..."
 HEADERS=$(curl -fsS -H "Origin: http://evil.example" -D - -o /dev/null "$WP_URL/?rest_route=/headless-bridge/v1/health")
-! echo "$HEADERS" | grep -qi "access-control-allow-origin"
+if echo "$HEADERS" | grep -qi "access-control-allow-origin"; then
+  echo "FAIL: access-control-allow-origin leaked for disallowed origin"
+  exit 1
+fi
 echo "$HEADERS" | grep -qi "vary: origin"
 echo "   OK"
 
