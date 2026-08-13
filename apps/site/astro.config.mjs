@@ -1,4 +1,19 @@
 import { defineConfig } from 'astro/config';
+import { fileURLToPath } from 'node:url';
+import { loadEnv } from 'vite';
+
+// Astro only injects the contents of `.env` into `process.env` once Vite's
+// buildStart hook runs — but the shell/ssr adapter choice below happens here,
+// synchronously, at config-evaluation time, which is before that hook fires.
+// `.env.example` documents vars (like PREVIEW_MODE) relative to the repo
+// root, so hydrate process.env from that same repo-root `.env` file now,
+// via Vite's own loadEnv, so the adapter switch actually sees them. A real
+// shell-exported PREVIEW_MODE still takes precedence over the file.
+const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
+const fileEnv = loadEnv(process.env.NODE_ENV ?? 'production', repoRoot, '');
+for (const [key, value] of Object.entries(fileEnv)) {
+	process.env[key] ??= value; // real shell env always wins
+}
 
 const PREVIEW_MODE = process.env.PREVIEW_MODE ?? 'shell';
 

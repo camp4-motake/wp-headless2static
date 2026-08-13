@@ -1,5 +1,5 @@
 ---
-import { escapeHtml, type PreviewData } from '@repo/shared';
+import type { PreviewData } from '@repo/shared';
 import ArticleLayout from '../../layouts/ArticleLayout.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { WP_API_URL, wp } from '../../lib/content';
@@ -120,11 +120,15 @@ if (IS_SSR) {
 					showError(UNREACHABLE);
 					return;
 				}
-				const data = await res.json();
-				document.title = data.title;
-				document.getElementById('preview-title')!.innerHTML = data.title;
-				document.getElementById('preview-date')!.textContent = (data.modified || '').slice(0, 10);
-				document.getElementById('preview-body')!.innerHTML = renderPreviewHtml(data);
+				try {
+					const data = await res.json();
+					document.title = data.title;
+					document.getElementById('preview-title')!.innerHTML = data.title;
+					document.getElementById('preview-date')!.textContent = (data.modified || '').slice(0, 10);
+					document.getElementById('preview-body')!.innerHTML = renderPreviewHtml(data);
+				} catch {
+					showError(UNREACHABLE);
+				}
 			}
 
 			run();
