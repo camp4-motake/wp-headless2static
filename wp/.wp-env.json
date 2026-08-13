@@ -1,0 +1,10 @@
+{
+  "core": null,
+  "phpVersion": "8.2",
+  "plugins": [ "./plugins/headless-bridge" ],
+  "themes": [ "./themes/headless-minimal" ],
+  "port": 8888,
+  "config": {
+    "WP_DEBUG": true
+  }
+}
