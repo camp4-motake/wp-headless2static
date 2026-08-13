@@ -10,6 +10,6 @@
     "setup": "pnpm wp:start && bash wp/seed.sh"
   },
   "devDependencies": {
-    "@wordpress/env": "^10.17.0"
+    "@wordpress/env": "^11.13.0"
   }
 }
