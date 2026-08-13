@@ -1,0 +1,15 @@
+{
+  "name": "wp-headless2static",
+  "private": true,
+  "engines": { "node": ">=22", "pnpm": ">=9" },
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "wp:start": "cd wp && wp-env start",
+    "wp:stop": "cd wp && wp-env stop",
+    "wp:destroy": "cd wp && wp-env destroy",
+    "setup": "pnpm wp:start && bash wp/seed.sh"
+  },
+  "devDependencies": {
+    "@wordpress/env": "^10.17.0"
+  }
+}
