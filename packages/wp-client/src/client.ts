@@ -21,10 +21,22 @@ export function createWpClient({ baseUrl, fetchFn, sleepFn }: WpClientOptions) {
 			if (page > MAX_PAGES) {
 				throw new WpClientError(`pagination exceeded ${MAX_PAGES} pages for ${path} — endpoint may be ignoring the page param`, path, null);
 			}
-			const batch = await fetchJsonWithRetry<WpRestPost[]>(
-				`${base}${path}per_page=${PER_PAGE}&page=${page}`,
-				opts,
-			);
+			let batch: WpRestPost[];
+			try {
+				batch = await fetchJsonWithRetry<WpRestPost[]>(
+					`${base}${path}per_page=${PER_PAGE}&page=${page}`,
+					opts,
+				);
+			} catch (e) {
+				// WP REST returns 400 (rest_post_invalid_page_number) once `page`
+				// exceeds the collection's last page — treat that as end-of-collection
+				// rather than an error, but only past page 1 (a 400 on the first
+				// page is a real failure).
+				if (page > 1 && e instanceof WpClientError && e.status === 400) {
+					return out;
+				}
+				throw e;
+			}
 			out.push(...batch.map(map));
 			if (batch.length < PER_PAGE) {
 				return out;

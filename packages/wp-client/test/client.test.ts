@@ -79,6 +79,17 @@ describe('createWpClient', () => {
 		await expect(client.health()).resolves.toEqual({ version: '0.1.0' });
 	});
 
+	it('treats an out-of-range page 400 as end of collection', async () => {
+		const page1 = Array.from({ length: 100 }, (_, i) => ({ ...WP_POST, id: i + 1, slug: `p${i + 1}` }));
+		const client = clientWith((url) =>
+			url.includes('page=2')
+				? new Response('{"code":"rest_post_invalid_page_number"}', { status: 400 })
+				: json(page1),
+		);
+		const posts = await client.getAllPosts();
+		expect(posts).toHaveLength(100);
+	});
+
 	it('rejects on unbounded pagination (endpoint always returns full page)', async () => {
 		const page = Array.from({ length: 100 }, (_, i) => ({ ...WP_POST, id: i + 1, slug: `p${i + 1}` }));
 		const client = clientWith(() => json(page));
