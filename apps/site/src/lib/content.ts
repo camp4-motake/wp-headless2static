@@ -1,5 +1,5 @@
 import type { Page, Post, Work } from '@repo/shared';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import { WpClientError, createCachedContent, createWpClient, mapPage, mapPost, mapWork } from '@repo/wp-client';
 
 export const WP_API_URL = (process.env.WP_API_URL ?? 'http://localhost:8888').replace(/\/$/, '');
@@ -14,7 +14,10 @@ export interface SiteContent {
 
 let cache: Promise<SiteContent> | null = null;
 
-const repoRoot = fileURLToPath(new URL('../../../../../', import.meta.url));
+// NOTE: import.meta.url is unreliable here — its depth differs between `astro dev`
+// (unbundled source path) and `astro build` (dist/.prerender/chunks). Astro always
+// runs with cwd = apps/site (pnpm --filter site …), so resolve from cwd instead.
+const repoRoot = resolve(process.cwd(), '../..');
 
 const cached = createCachedContent({
 	client: wp,
