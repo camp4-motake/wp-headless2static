@@ -1,9 +1,20 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { loadContent } from '../lib/content';
 
 export const prerender = true;
+
+const { posts } = await loadContent();
 ---
 
 <BaseLayout title="Headless Demo">
-	<p>scaffold ok</p>
+	<h1>記事一覧</h1>
+	<ul class="post-list">
+		{posts.map((post) => (
+			<li>
+				<a href={`/posts/${post.slug}/`} set:html={post.title} />
+				<time datetime={post.date}>{post.date.slice(0, 10)}</time>
+			</li>
+		))}
+	</ul>
 </BaseLayout>

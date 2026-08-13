@@ -1,0 +1,17 @@
+---
+import ArticleLayout from '../../layouts/ArticleLayout.astro';
+import { loadContent } from '../../lib/content';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+	const { posts } = await loadContent();
+	return posts.map((post) => ({ params: { slug: post.slug }, props: { post } }));
+}
+
+const { post } = Astro.props;
+---
+
+<ArticleLayout title={post.title} dateISO={post.date} terms={post.categories}>
+	<Fragment set:html={post.content} />
+</ArticleLayout>

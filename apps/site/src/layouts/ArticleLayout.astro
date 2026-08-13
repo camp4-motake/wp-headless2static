@@ -1,0 +1,47 @@
+---
+import type { Term } from '@repo/shared';
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+	title: string;
+	dateISO?: string;
+	terms?: Term[];
+}
+
+const { title, dateISO, terms = [] } = Astro.props;
+---
+
+<BaseLayout title={title}>
+	<article>
+		<header>
+			<h1 set:html={title} />
+			{dateISO && <time datetime={dateISO}>{dateISO.slice(0, 10)}</time>}
+			{terms.length > 0 && (
+				<ul class="terms">
+					{terms.map((t) => (
+						<li><a href={`/category/${t.slug}/`}>{t.name}</a></li>
+					))}
+				</ul>
+			)}
+		</header>
+		<div class="article-body">
+			<slot />
+		</div>
+	</article>
+</BaseLayout>
+
+<style>
+	.terms {
+		list-style: none;
+		display: flex;
+		gap: 0.5rem;
+		padding: 0;
+	}
+	.terms a {
+		font-size: 0.8rem;
+		background: #eef2ff;
+		border-radius: 999px;
+		padding: 0.1rem 0.7rem;
+		text-decoration: none;
+	}
+</style>
