@@ -52,24 +52,38 @@ jobs:
 
       - name: Scan SSH host key
         if: ${{ vars.DEPLOY_TARGET == 'rental' }}
-        run: ssh-keyscan -p "${{ secrets.RENTAL_PORT || 22 }}" "${{ secrets.RENTAL_HOST }}" >> ~/.ssh/known_hosts
+        run: |
+          mkdir -p -m 0700 ~/.ssh
+          ssh-keyscan -p "$RENTAL_PORT" "$RENTAL_HOST" >> ~/.ssh/known_hosts
+        env:
+          RENTAL_PORT: ${{ secrets.RENTAL_PORT || 22 }}
+          RENTAL_HOST: ${{ secrets.RENTAL_HOST }}
 
       - name: Deploy
         run: |
           cat > tools/deploy/deploy.config <<EOF
-          DEPLOY_TARGET=${{ vars.DEPLOY_TARGET }}
-          DEPLOY_METHOD=${{ vars.DEPLOY_METHOD || 'rsync' }}
-          RENTAL_HOST=${{ secrets.RENTAL_HOST }}
-          RENTAL_USER=${{ secrets.RENTAL_USER }}
-          RENTAL_PATH=${{ secrets.RENTAL_PATH }}
-          RENTAL_PORT=${{ secrets.RENTAL_PORT || 22 }}
+          DEPLOY_TARGET=$DEPLOY_TARGET
+          DEPLOY_METHOD=$DEPLOY_METHOD
+          RENTAL_HOST=$RENTAL_HOST
+          RENTAL_USER=$RENTAL_USER
+          RENTAL_PATH=$RENTAL_PATH
+          RENTAL_PORT=$RENTAL_PORT
           RSYNC_EXCLUDES="wp/ .htaccess"
-          FTP_HOST=${{ secrets.FTP_HOST }}
-          FTP_USER=${{ secrets.FTP_USER }}
-          CF_PAGES_PROJECT=${{ vars.CF_PAGES_PROJECT }}
+          FTP_HOST=$FTP_HOST
+          FTP_USER=$FTP_USER
+          CF_PAGES_PROJECT=$CF_PAGES_PROJECT
           EOF
           bash tools/deploy/deploy.sh
         env:
+          DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET }}
+          DEPLOY_METHOD: ${{ vars.DEPLOY_METHOD || 'rsync' }}
+          RENTAL_HOST: ${{ secrets.RENTAL_HOST }}
+          RENTAL_USER: ${{ secrets.RENTAL_USER }}
+          RENTAL_PATH: ${{ secrets.RENTAL_PATH }}
+          RENTAL_PORT: ${{ secrets.RENTAL_PORT || 22 }}
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          CF_PAGES_PROJECT: ${{ vars.CF_PAGES_PROJECT }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
