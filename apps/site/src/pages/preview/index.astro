@@ -1,0 +1,133 @@
+---
+import { escapeHtml, type PreviewData } from '@repo/shared';
+import ArticleLayout from '../../layouts/ArticleLayout.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { WP_API_URL, wp } from '../../lib/content';
+import { renderPreviewHtml } from '../../lib/preview-render';
+
+// NOTE: no `export const prerender` here on purpose —
+// shell mode (output:'static'): page is prerendered as the static shell;
+// ssr mode (output:'server'): page renders on demand per request.
+const IS_SSR = (process.env.PREVIEW_MODE ?? 'shell') === 'ssr';
+
+let ssrData: PreviewData | null = null;
+let ssrError: string | null = null;
+
+if (IS_SSR) {
+	const id = Number(Astro.url.searchParams.get('id'));
+	const token = Astro.url.searchParams.get('token') ?? '';
+	if (!id || !token) {
+		ssrError = 'プレビューの有効期限が切れました。WordPress 管理画面からプレビューを開き直してください。';
+	} else {
+		try {
+			ssrData = await wp.getPreview(id, token);
+		} catch (e) {
+			ssrError =
+				e instanceof Error && 'status' in e && (e as { status: number | null }).status === 403
+					? 'プレビューの有効期限が切れました。WordPress 管理画面からプレビューを開き直してください。'
+					: 'WordPress に接続できません。';
+		}
+	}
+}
+---
+
+{
+	IS_SSR ? (
+		ssrData ? (
+			<ArticleLayout title={ssrData.title} dateISO={ssrData.modified}>
+				<Fragment set:html={renderPreviewHtml(ssrData)} />
+			</ArticleLayout>
+		) : (
+			<BaseLayout title="プレビュー">
+				<p class="preview-error">{ssrError}</p>
+			</BaseLayout>
+		)
+	) : (
+		<BaseLayout title="プレビュー">
+			<article>
+				<header>
+					<h1 id="preview-title">読み込み中…</h1>
+					<time id="preview-date" />
+				</header>
+				<div class="article-body" id="preview-body" />
+				<div id="preview-error" hidden>
+					<p id="preview-error-message" />
+					<details>
+						<summary>制作者向けの確認ポイント</summary>
+						<ul>
+							<li>WP 側 headless-bridge の Frontend URL(CORS 許可オリジン)がこのサイトの URL と一致しているか</li>
+							<li>WP_API_URL(ビルド時設定)が正しいか: <code id="preview-wp-url" /></li>
+						</ul>
+					</details>
+				</div>
+			</article>
+		</BaseLayout>
+	)
+}
+
+{
+	!IS_SSR && (
+		<script define:vars={{ wpApiUrl: WP_API_URL }}>
+			window.__WP_API_URL__ = wpApiUrl;
+		</script>
+	)
+}
+
+{
+	!IS_SSR && (
+		<script>
+			import { renderPreviewHtml } from '../../lib/preview-render';
+
+			declare global {
+				interface Window {
+					__WP_API_URL__: string;
+				}
+			}
+
+			const EXPIRED = 'プレビューの有効期限が切れました。WordPress 管理画面からプレビューを開き直してください。';
+			const UNREACHABLE = 'WordPress に接続できません。';
+
+			const wpApiUrl = window.__WP_API_URL__;
+
+			function showError(message: string) {
+				document.getElementById('preview-title')!.textContent = 'プレビューを表示できません';
+				const box = document.getElementById('preview-error')!;
+				box.hidden = false;
+				document.getElementById('preview-error-message')!.textContent = message;
+				document.getElementById('preview-wp-url')!.textContent = wpApiUrl;
+			}
+
+			async function run() {
+				const params = new URLSearchParams(location.search);
+				const id = Number(params.get('id'));
+				const token = params.get('token') ?? '';
+				if (!id || !token) {
+					showError(EXPIRED);
+					return;
+				}
+				let res: Response;
+				try {
+					res = await fetch(`${wpApiUrl}/wp-json/headless-bridge/v1/preview/${id}?token=${encodeURIComponent(token)}`);
+				} catch {
+					showError(UNREACHABLE);
+					return;
+				}
+				if (res.status === 403) {
+					showError(EXPIRED);
+					return;
+				}
+				if (!res.ok) {
+					showError(UNREACHABLE);
+					return;
+				}
+				const data = await res.json();
+				document.title = data.title;
+				document.getElementById('preview-title')!.innerHTML = data.title;
+				document.getElementById('preview-date')!.textContent = (data.modified || '').slice(0, 10);
+				document.getElementById('preview-body')!.innerHTML = renderPreviewHtml(data);
+			}
+
+			run();
+		</script>
+	)
+}
