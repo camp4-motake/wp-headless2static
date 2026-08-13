@@ -7,7 +7,8 @@
     "wp:start": "cd wp && wp-env start",
     "wp:stop": "cd wp && wp-env stop",
     "wp:destroy": "cd wp && wp-env destroy",
-    "bootstrap": "pnpm wp:start && bash wp/seed.sh"
+    "bootstrap": "pnpm wp:start && bash wp/seed.sh",
+    "test": "pnpm -r --if-present test"
   },
   "devDependencies": {
     "@wordpress/env": "^11.13.0"
