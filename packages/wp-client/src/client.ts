@@ -1,5 +1,5 @@
 import type { Page, Post, PreviewData, Work } from '@repo/shared';
-import { fetchJsonWithRetry, type RetryOptions } from './http.ts';
+import { fetchJsonWithRetry, WpClientError, type RetryOptions } from './http.ts';
 import { mapPage, mapPost, mapWork, type WpRestPost } from './map.ts';
 
 export interface WpClientOptions {
@@ -9,6 +9,7 @@ export interface WpClientOptions {
 }
 
 const PER_PAGE = 100;
+const MAX_PAGES = 100;
 
 export function createWpClient({ baseUrl, fetchFn, sleepFn }: WpClientOptions) {
 	const base = baseUrl.replace(/\/$/, '');
@@ -17,6 +18,9 @@ export function createWpClient({ baseUrl, fetchFn, sleepFn }: WpClientOptions) {
 	async function allPages<T>(path: string, map: (p: WpRestPost) => T): Promise<T[]> {
 		const out: T[] = [];
 		for (let page = 1; ; page++) {
+			if (page > MAX_PAGES) {
+				throw new WpClientError(`pagination exceeded ${MAX_PAGES} pages for ${path} — endpoint may be ignoring the page param`, path, null);
+			}
 			const batch = await fetchJsonWithRetry<WpRestPost[]>(
 				`${base}${path}per_page=${PER_PAGE}&page=${page}`,
 				opts,

@@ -35,9 +35,11 @@ describe('fetchJsonWithRetry', () => {
 
 	it('does NOT retry on 404', async () => {
 		const fetchFn = vi.fn(async () => new Response('nope', { status: 404 }));
-		const err = await fetchJsonWithRetry('http://x/y', { fetchFn, sleepFn: noSleep }).catch((e) => e);
+		const err = await fetchJsonWithRetry('http://x/y', { fetchFn, sleepFn: noSleep }).catch((e: unknown) => e);
 		expect(err).toBeInstanceOf(WpClientError);
-		expect(err.status).toBe(404);
+		if (err instanceof WpClientError) {
+			expect(err.status).toBe(404);
+		}
 		expect(fetchFn).toHaveBeenCalledTimes(1);
 	});
 

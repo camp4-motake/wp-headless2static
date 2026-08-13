@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createWpClient } from '../src/client.ts';
+import { WpClientError } from '../src/http.ts';
 
 const json = (body: unknown) =>
 	new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
@@ -76,5 +77,15 @@ describe('createWpClient', () => {
 	it('health returns version', async () => {
 		const client = clientWith(() => json({ version: '0.1.0' }));
 		await expect(client.health()).resolves.toEqual({ version: '0.1.0' });
+	});
+
+	it('rejects on unbounded pagination (endpoint always returns full page)', async () => {
+		const page = Array.from({ length: 100 }, (_, i) => ({ ...WP_POST, id: i + 1, slug: `p${i + 1}` }));
+		const client = clientWith(() => json(page));
+		const err = await client.getAllPosts().catch((e: unknown) => e);
+		expect(err).toBeInstanceOf(WpClientError);
+		if (err instanceof WpClientError) {
+			expect(err.message).toContain('pagination exceeded');
+		}
 	});
 });
