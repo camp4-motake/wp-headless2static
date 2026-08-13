@@ -15,6 +15,7 @@ const HEADLESS_BRIDGE_VERSION = '0.1.0';
 
 require_once __DIR__ . '/includes/class-token.php';
 require_once __DIR__ . '/includes/class-settings.php';
+require_once __DIR__ . '/includes/class-preview-endpoint.php';
 
 final class Plugin {
 
@@ -31,6 +32,7 @@ final class Plugin {
 
 	public static function boot(): void {
 		Settings::boot();
+		Preview_Endpoint::boot();
 		add_action( 'rest_api_init', [ self::class, 'register_health_route' ] );
 	}
 
