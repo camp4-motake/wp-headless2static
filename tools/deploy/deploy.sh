@@ -26,16 +26,22 @@ case "${DEPLOY_TARGET:?DEPLOY_TARGET is required}" in
 		case "${DEPLOY_METHOD:-rsync}" in
 			rsync)
 				EXCLUDE_ARGS=()
+				set -f
 				for e in ${RSYNC_EXCLUDES:-}; do EXCLUDE_ARGS+=( "--exclude=$e" ); done
+				set +f
 				run rsync -az --delete "${EXCLUDE_ARGS[@]}" \
 					-e "ssh -p ${RENTAL_PORT:-22}" \
 					"$DIST/" "${RENTAL_USER:?}@${RENTAL_HOST:?}:${RENTAL_PATH:?}/"
 				;;
 			lftp)
 				: "${FTP_PASSWORD:?FTP_PASSWORD env var is required for lftp deploys}"
-				run lftp -u "${FTP_USER:?},${FTP_PASSWORD}" -e \
-					"set ftp:ssl-force true; mirror -R --delete --parallel=4 $DIST ${RENTAL_PATH:?}; quit" \
-					"${FTP_HOST:?}"
+				if [ "$DRY_RUN" = "1" ]; then
+					echo "DRY-RUN: lftp -u ${FTP_USER:?},[REDACTED] -e \"set ftp:ssl-force true; mirror -R --delete --parallel=4 $DIST ${RENTAL_PATH:?}; quit\" ${FTP_HOST:?}"
+				else
+					lftp -u "${FTP_USER:?},${FTP_PASSWORD}" -e \
+						"set ftp:ssl-force true; mirror -R --delete --parallel=4 $DIST ${RENTAL_PATH:?}; quit" \
+						"${FTP_HOST:?}"
+				fi
 				;;
 			*) echo "unknown DEPLOY_METHOD: $DEPLOY_METHOD"; exit 1 ;;
 		esac
