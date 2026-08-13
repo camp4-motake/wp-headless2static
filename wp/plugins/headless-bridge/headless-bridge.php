@@ -22,9 +22,6 @@ require_once __DIR__ . '/includes/class-cors.php';
 final class Plugin {
 
 	public static function secret(): string {
-		if ( defined( 'AUTH_KEY' ) && AUTH_KEY ) {
-			return AUTH_KEY;
-		}
 		return wp_salt( 'auth' );
 	}
 
