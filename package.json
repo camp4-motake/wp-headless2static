@@ -11,7 +11,8 @@
     "test": "pnpm -r --if-present test",
     "dev": "pnpm --filter site dev",
     "build": "pnpm --filter site build",
-    "site:preview": "pnpm --filter site preview"
+    "site:preview": "pnpm --filter site preview",
+    "e2e": "pnpm --filter site e2e"
   },
   "devDependencies": {
     "@wordpress/env": "^11.13.0"
