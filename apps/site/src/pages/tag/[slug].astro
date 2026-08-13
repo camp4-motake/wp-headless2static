@@ -1,0 +1,31 @@
+---
+import type { Post, Term } from '@repo/shared';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { loadContent } from '../../lib/content';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+	const { posts } = await loadContent();
+	const byTerm = new Map<string, { term: Term; posts: Post[] }>();
+	for (const post of posts) {
+		for (const term of post.tags) {
+			const entry = byTerm.get(term.slug) ?? { term, posts: [] };
+			entry.posts.push(post);
+			byTerm.set(term.slug, entry);
+		}
+	}
+	return [...byTerm.values()].map(({ term, posts }) => ({ params: { slug: term.slug }, props: { term, posts } }));
+}
+
+const { term, posts } = Astro.props;
+---
+
+<BaseLayout title={`タグ: ${term.name}`}>
+	<h1>タグ: {term.name}</h1>
+	<ul class="post-list">
+		{posts.map((post) => (
+			<li><a href={`/posts/${post.slug}/`} set:html={post.title} /></li>
+		))}
+	</ul>
+</BaseLayout>
