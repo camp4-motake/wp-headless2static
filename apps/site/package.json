@@ -11,12 +11,13 @@
   "dependencies": {
     "@repo/shared": "workspace:*",
     "@repo/wp-client": "workspace:*",
-    "astro": "^5.0.0"
+    "astro": "^7.2.1"
   },
   "devDependencies": {
-    "@astrojs/cloudflare": "^12.0.0",
+    "@astrojs/cloudflare": "^14.2.1",
     "@playwright/test": "^1.62.1",
-    "typescript": "^5.7.0",
-    "vite": "^6.4.1"
+    "typescript": "^7.0.2",
+    "vite": "^8.2.1",
+    "wrangler": "^4.83.0"
   }
 }
