@@ -49,6 +49,16 @@ export function createWpClient({ baseUrl, fetchFn, sleepFn }: WpClientOptions) {
 		getAllPosts: () => allPages('/wp-json/wp/v2/posts?_embed=1&', mapPost),
 		getAllPages: () => allPages('/wp-json/wp/v2/pages?', mapPage),
 		getAllWorks: () => allPages('/wp-json/wp/v2/works?_embed=1&', mapWork),
+		getPostStubs: (type: 'posts' | 'pages' | 'works') =>
+			allPages(`/wp-json/wp/v2/${type}?_fields=id,modified&`, (p) => ({
+				id: p.id,
+				modified: (p as unknown as { modified: string }).modified ?? p.modified_gmt,
+			})),
+		getPostById: (type: 'posts' | 'pages' | 'works', id: number) =>
+			fetchJsonWithRetry<WpRestPost>(
+				`${base}/wp-json/wp/v2/${type}/${id}${type === 'pages' ? '' : '?_embed=1'}`,
+				opts,
+			),
 		getPreview: (id: number, token: string) =>
 			fetchJsonWithRetry<PreviewData>(
 				`${base}/wp-json/headless-bridge/v1/preview/${id}?token=${encodeURIComponent(token)}`,
