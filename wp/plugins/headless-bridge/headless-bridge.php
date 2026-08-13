@@ -17,6 +17,7 @@ require_once __DIR__ . '/includes/class-token.php';
 require_once __DIR__ . '/includes/class-settings.php';
 require_once __DIR__ . '/includes/class-preview-endpoint.php';
 require_once __DIR__ . '/includes/class-preview-link.php';
+require_once __DIR__ . '/includes/class-cors.php';
 
 final class Plugin {
 
@@ -35,6 +36,7 @@ final class Plugin {
 		Settings::boot();
 		Preview_Endpoint::boot();
 		Preview_Link::boot();
+		Cors::boot();
 		add_action( 'rest_api_init', [ self::class, 'register_health_route' ] );
 	}
 
