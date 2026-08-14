@@ -33,7 +33,8 @@ WordPress は投稿・固定ページ・カスタム投稿タイプ(CPT)の管�
 - Node.js 22.12 以上(`.nvmrc` は `22`)
 - pnpm 9 以上
 - Docker(ローカルの `wp-env` を動かすために必要)
-- PHP 8.1 以上 と Composer(`wp/plugins/headless-bridge` の PHP テストを実行する場合のみ)
+- WordPress 7.0.4 以上(wp-env 以外の既存 WordPress にプラグインを設置する場合)
+- PHP 8.3 以上 と Composer(`wp/plugins/headless-bridge` の PHP テストを実行する場合のみ)
 
 ## クイックスタート
 
@@ -91,7 +92,7 @@ WordPress の編集画面から「プレビュー」を押すと、`headless-bri
 
 新しいカスタム投稿タイプ(CPT)やカスタムフィールド(メタ)を追加する際は `wp/plugins/site-config` を参考にしてください。`work` CPT とその meta(`client_name` / `project_url`)がサンプル実装として入っています。
 
-メタフィールドを登録する際は、必ず次のように `revisions_enabled: true` を付けて `register_post_meta()` を呼び出してください(WordPress 6.4 以降が必要です)。
+メタフィールドを登録する際は、必ず次のように `revisions_enabled: true` を付けて `register_post_meta()` を呼び出してください(WordPress 6.4 で導入された機能です)。
 
 ```php
 register_post_meta( 'work', 'client_name', [

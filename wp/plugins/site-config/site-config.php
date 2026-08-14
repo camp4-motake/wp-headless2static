@@ -3,6 +3,8 @@
  * Plugin Name: Site Config
  * Description: Project-specific content model: example "work" CPT with revision-enabled meta.
  * Version: 0.1.0
+ * Requires at least: 7.0.4
+ * Requires PHP: 8.3
  */
 
 defined( 'ABSPATH' ) || exit;
