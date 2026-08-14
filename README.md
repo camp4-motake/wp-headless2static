@@ -31,7 +31,7 @@ WordPress は投稿・固定ページ・カスタム投稿タイプ(CPT)の管�
 ## 必要環境
 
 - Node.js 22.12 以上(`.nvmrc` は `22`)
-- pnpm 9 以上
+- pnpm 11 以上
 - Docker(ローカルの `wp-env` を動かすために必要)
 - WordPress 7.0.4 以上(wp-env 以外の既存 WordPress にプラグインを設置する場合)
 - PHP 8.3 以上 と Composer(`wp/plugins/headless-bridge` の PHP テストを実行する場合のみ)

@@ -1,8 +1,8 @@
 {
   "name": "wp-headless2static",
   "private": true,
-  "engines": { "node": ">=22.12.0", "pnpm": ">=9" },
-  "packageManager": "pnpm@9.15.0",
+  "engines": { "node": ">=22.12.0", "pnpm": ">=11" },
+  "packageManager": "pnpm@11.21.0",
   "scripts": {
     "wp:start": "cd wp && wp-env start",
     "wp:stop": "cd wp && wp-env stop",
