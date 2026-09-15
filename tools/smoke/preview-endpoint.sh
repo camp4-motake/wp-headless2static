@@ -31,6 +31,25 @@ echo "4) preview link points at the frontend..."
 cli eval "echo get_preview_post_link( $DRAFT_ID );" | grep -q "http://localhost:4321/preview/?id=$DRAFT_ID&token="
 echo "   OK"
 
+echo "4b) block-editor draft preview (?p=ID&preview=true) redirects to the frontend..."
+JAR=$(mktemp)
+trap 'cleanup; rm -f "$JAR"' EXIT
+curl -fsS -o /dev/null -c "$JAR" -b "wordpress_test_cookie=WP%20Cookie%20check" \
+  --data "log=admin&pwd=password&testcookie=1" "$WP_URL/wp-login.php"
+LOCATION=$(curl -sS -o /dev/null -b "$JAR" -w "%{redirect_url}" "$WP_URL/?p=$DRAFT_ID&preview=true")
+case "$LOCATION" in
+  "http://localhost:4321/preview/?id=$DRAFT_ID&token="*) ;;
+  *) echo "FAIL: unexpected redirect: $LOCATION"; exit 1 ;;
+esac
+echo "   OK"
+
+echo "4c) anonymous front-end preview does not issue a token..."
+LOCATION=$(curl -sS -o /dev/null -w "%{redirect_url}" "$WP_URL/?p=$DRAFT_ID&preview=true")
+case "$LOCATION" in
+  *"token="*) echo "FAIL: token issued to anonymous request: $LOCATION"; exit 1 ;;
+esac
+echo "   OK"
+
 echo "5) cors allows the configured frontend origin..."
 curl -fsS -H "Origin: http://localhost:4321" -D - -o /dev/null "$WP_URL/?rest_route=/headless-bridge/v1/health" | grep -qi "access-control-allow-origin: http://localhost:4321"
 echo "   OK"
