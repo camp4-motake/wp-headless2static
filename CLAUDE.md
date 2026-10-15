@@ -2,16 +2,6 @@
 
 Monorepo boilerplate: WordPress (headless CMS) + Astro static builds. Delivery pipeline complete (webhook → GitHub Actions → deploy). Detailed docs: `README.md` (Japanese).
 
-## Layout
-
-- `apps/site` — Astro frontend (content loader: `src/lib/content.ts`)
-- `packages/wp-client` — WP REST client + content cache (`src/cache.ts`, Vitest)
-- `packages/shared` — pure render helpers shared with preview shell (Vitest)
-- `wp/plugins/headless-bridge` — preview tokens, CORS, webhook dispatch (PHPUnit)
-- `wp/plugins/site-config` — CPT/meta registration
-- `tools/deploy` — `deploy.sh` (rsync/lftp/wrangler, `--dry-run`); `tools/smoke` — preview smoke test
-- `.github/workflows/build-deploy.yml` — CI (`repository_dispatch: wp-content-update`)
-
 ## Commands
 
 - `pnpm bootstrap` (wp-env start + seed) / `pnpm dev` / `pnpm build`
