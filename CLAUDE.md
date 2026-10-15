@@ -1,6 +1,6 @@
 # wp-headless2static
 
-Monorepo boilerplate: WordPress (headless CMS) + Astro static builds. Delivery pipeline complete (webhook → GitHub Actions → deploy). Detailed docs: `README.md` (Japanese).
+Monorepo boilerplate: WordPress (headless CMS) + Astro static builds. Delivery pipeline complete (webhook → GitHub Actions → deploy). Detailed docs: `README.md` (English) / `README.ja.md` (Japanese).
 
 ## Commands
 
@@ -21,4 +21,4 @@ Monorepo boilerplate: WordPress (headless CMS) + Astro static builds. Delivery p
 ## Conventions
 
 - Commits: English, Conventional Commits `<type>(<scope>): <description>`; scope = package name when applicable; lowercase imperative, no trailing period
-- `CLAUDE.md` is English-only (README is Japanese)
+- `CLAUDE.md` is English-only; keep `README.md` (English) and `README.ja.md` (Japanese) in sync

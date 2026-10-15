@@ -1,98 +1,100 @@
 # wp-headless2static
 
-WordPress をヘッドレス CMS として使い、Astro でビルドした静的サイト(または Cloudflare Workers 上の SSR)として配信するためのモノレポボイラープレートです。国内レンタルサーバーへの rsync/FTPS デプロイと、Cloudflare Pages / Workers へのデプロイの両方を、同じビルド・同じデプロイスクリプトから選べるように構成しています。
+English | [日本語](README.ja.md)
 
-## 全体構成
+A monorepo boilerplate that uses WordPress as a headless CMS and delivers the site as a static build made with Astro (or as SSR on Cloudflare Workers). The same build and the same deploy script can target either a traditional shared/rental host (rsync / FTPS) or Cloudflare Pages / Workers.
 
-大まかなデータの流れはこうなります。
+## Architecture
+
+The data flow at a glance:
 
 ```
 WordPress (Headless CMS)
    │  REST API (wp-json)
    ▼
-Astro ビルド (apps/site)
+Astro build (apps/site)
    │
    ▼
-dist/ (静的 HTML / または SSR 用 server+client)
+dist/ (static HTML, or server+client for SSR)
    │
-   ├─▶ 国内レンタルサーバー (rsync / lftp)
+   ├─▶ Rental/shared hosting (rsync / lftp)
    └─▶ Cloudflare Pages / Workers (wrangler)
 ```
 
-WordPress は投稿・固定ページ・カスタム投稿タイプ(CPT)の管理と REST API 提供に専念し、公開画面のレンダリングは一切行いません。表側は Astro が担当し、ビルド時に WP の REST API から全コンテンツを取得して静的 HTML を生成します。
+WordPress only manages posts, pages, and custom post types (CPTs) and serves the REST API; it never renders the public site. Astro owns the front end: at build time it fetches all content from the WP REST API and generates static HTML.
 
-プレビュー(下書き確認)には 2 つのモードがあります。
+Previews (checking drafts) come in two modes:
 
-- **shell モード**: 静的な HTML シェル + クライアント JS でプレビューを描画します。ホスティング先を選ばず、レンタルサーバーの静的配信だけで完結します。
-- **ssr モード**: Cloudflare Workers 上で本番と同一の Astro コンポーネントをサーバーサイドレンダリングし、より本番に近いプレビューを提供します。
+- **shell mode**: renders the preview with a static HTML shell plus client-side JS. Works on any host, including plain static hosting on a rental server.
+- **ssr mode**: server-side renders the same Astro components as production on Cloudflare Workers, giving a preview closer to the real thing.
 
-どちらを使うかは環境変数 `PREVIEW_MODE` で切り替えます(詳細は後述)。
+The mode is selected with the `PREVIEW_MODE` environment variable (details below).
 
-## 必要環境
+## Requirements
 
-- Node.js 22.12 以上(`.nvmrc` は `22`)
-- pnpm 11 以上
-- Docker(ローカルの `wp-env` を動かすために必要)
-- WordPress 7.0.4 以上(wp-env 以外の既存 WordPress にプラグインを設置する場合)
-- PHP 8.3 以上 と Composer(`wp/plugins/headless-bridge` の PHP テストを実行する場合のみ)
+- Node.js 22.12+ (`.nvmrc` is `22`)
+- pnpm 11+
+- Docker (to run the local `wp-env`)
+- WordPress 7.0.4+ (when installing the plugins on an existing WordPress instead of wp-env)
+- PHP 8.3+ and Composer (only for running the PHP tests in `wp/plugins/headless-bridge`)
 
-## クイックスタート
+## Quick start
 
 ```bash
 pnpm install
-pnpm bootstrap   # wp-env を起動し、記事・固定ページ・works(CPT)のサンプルデータを投入
-pnpm dev         # Astro の開発サーバーを起動
+pnpm bootstrap   # start wp-env and seed sample posts, pages, and works (CPT)
+pnpm dev         # start the Astro dev server
 ```
 
-`pnpm bootstrap` は `wp-env start`(ローカル WordPress のコンテナ起動)と `wp/seed.sh` の実行をまとめて行うコマンドで、プラグイン・テーマの有効化やサンプル投稿・works の投入まで自動で済みます。pnpm には組み込みの `pnpm setup` コマンドがあるため名前が衝突しないよう `bootstrap` という名前にしています(後述の `site:deploy` も同様の理由で `deploy` ではなく `site:deploy` という名前です)。
+`pnpm bootstrap` combines `wp-env start` (starts the local WordPress containers) with `wp/seed.sh`, which activates the plugins and theme and seeds sample posts and works. It is named `bootstrap` because pnpm has a built-in `pnpm setup` command (for the same reason, the deploy script is `site:deploy` rather than `deploy`).
 
-起動後、WordPress 管理画面には次の URL・アカウントでアクセスできます。
+Once it is running, the WordPress admin is available at:
 
-- 管理画面: http://localhost:8888/wp-admin
-- ユーザー名 / パスワード: `admin` / `password`
+- Admin: http://localhost:8888/wp-admin
+- Username / password: `admin` / `password`
 
-投稿一覧または編集画面の「プレビュー」ボタンを押すと、`pnpm dev` で起動している http://localhost:4321 に対して本番同等のプレビュー(下書き含む)が開きます。
+Clicking "Preview" from the post list or editor opens a production-equivalent preview (drafts included) against http://localhost:4321, served by `pnpm dev`.
 
-## 環境変数と `.env`
+## Environment variables and `.env`
 
-`.env` ファイルは **リポジトリルート**(このファイルと同じ階層)に置きます。`.env.example` をコピーして使ってください。
+Put the `.env` file at the **repository root** (next to this file). Start from `.env.example`:
 
 ```bash
 cp .env.example .env
 ```
 
-優先順位は「シェルの環境変数 > `.env` ファイルの値」です。`.env` はあくまでローカル開発時のデフォルト値であり、CI やターミナルで明示的に環境変数をエクスポートすればそちらが常に優先されます。
+Precedence is "shell environment > `.env` file". `.env` only provides defaults for local development; anything explicitly exported in CI or your terminal always wins.
 
-主な変数は次の 3 つです。
+The main variables:
 
-| 変数 | 説明 |
+| Variable | Description |
 |---|---|
-| `WP_API_URL` | WordPress REST API のベース URL(ローカル wp-env / レンタルサーバー / 任意の環境を指定) |
-| `PREVIEW_MODE` | `shell`(静的シェル + JS。どこでも動く)または `ssr`(Cloudflare Workers)。デフォルトは `shell` |
-| `NO_CACHE` | `1` を指定するとコンテンツ取得キャッシュを無効化し、常にフル取得を行う(Astro 側のビルドキャッシュには影響しない) |
+| `WP_API_URL` | Base URL of the WordPress REST API (local wp-env, rental server, or any other environment) |
+| `PREVIEW_MODE` | `shell` (static shell + JS, runs anywhere) or `ssr` (Cloudflare Workers). Defaults to `shell` |
+| `NO_CACHE` | Set to `1` to bypass the content fetch cache and always do a full fetch (does not affect Astro's own build cache) |
 
-重要な注意点として、`PREVIEW_MODE` は単なる実行時フラグではなく **Astro のアダプタ切替そのもの** に効きます。`apps/site/astro.config.mjs` はビルド設定を評価する時点(Vite の環境変数注入より前)でリポジトリルートの `.env` を先読みし、`PREVIEW_MODE=ssr` なら `@astrojs/cloudflare` アダプタを、それ以外なら静的出力を選択します。つまり `PREVIEW_MODE` を変えて `pnpm build` をやり直すと、生成される `dist/` の構造自体が変わります(後述)。
+Important: `PREVIEW_MODE` is not just a runtime flag — it **switches the Astro adapter itself**. `apps/site/astro.config.mjs` preloads the root `.env` while the config is evaluated (before Vite injects env vars) and picks the `@astrojs/cloudflare` adapter when `PREVIEW_MODE=ssr`, static output otherwise. Changing `PREVIEW_MODE` and re-running `pnpm build` therefore changes the structure of the generated `dist/` (see below).
 
-## プレビューの仕組み
+## How previews work
 
-WordPress の編集画面から「プレビュー」を押すと、`headless-bridge` プラグインが HMAC 署名付きトークン(有効期限 10 分)を発行し、次の形式の URL にリダイレクトします。
+When you click "Preview" in the WordPress editor, the `headless-bridge` plugin issues an HMAC-signed token (valid for 10 minutes) and redirects to a URL of this form:
 
 ```
-{Frontend URL}/preview/?id={投稿ID}&token={トークン}
+{Frontend URL}/preview/?id={post ID}&token={token}
 ```
 
-ここで重要なのが、`headless-bridge` の管理画面設定にある **「Frontend URL」は必ずオリジンのみ**(`https://example.com` のようにスキーム+ホスト+ポートだけ)を指定するということです。パスを含めてはいけませんし、末尾のスラッシュも不要です。これは CORS の許可判定が REST API 側でオリジン単位(`scheme://host[:port]`)で行われているためで、パスを含めて設定すると意図通りに動かない可能性があります。
+The **"Frontend URL" in the `headless-bridge` settings must be an origin only** (scheme + host + port, e.g. `https://example.com`) — no path and no trailing slash. The REST API checks CORS per origin (`scheme://host[:port]`), so a value that includes a path may not work as intended.
 
-2 つのプレビューモードの違いは次の通りです。
+The two preview modes differ as follows:
 
-- **shell モード**: 静的ホスティングだけで動作します。ページ側は JS でプレビュー用データを取得して描画しますが、カスタムフィールド駆動のブロック(work の `client_name` / `project_url` など)を安全に両モードで同じ見た目にするため、レンダリングロジックは `packages/shared` の純関数として実装する規約になっています(`packages/shared/src/render/work-meta.ts` の `renderWorkMeta` を参照してください)。
-- **ssr モード**: Cloudflare Workers 上で本番と同一の Astro コンポーネントを使ってサーバーサイドレンダリングします。このモードを使う場合、**Workers 側にも `WP_API_URL` と `PREVIEW_MODE` の環境変数を設定する必要があります**(ローカルの `.env` はビルド時にしか読まれず、デプロイ後の Workers 実行環境には自動で伝わりません)。設定方法は後述の「Cloudflare SSR の手動検証チェックリスト」を参照してください。
+- **shell mode**: works on static hosting alone. The page fetches preview data with JS and renders it. To keep custom-field-driven blocks (such as a work's `client_name` / `project_url`) rendering identically in both modes, the convention is to implement their rendering logic as pure functions in `packages/shared` (see `renderWorkMeta` in `packages/shared/src/render/work-meta.ts`).
+- **ssr mode**: server-side renders with the same Astro components as production on Cloudflare Workers. In this mode **you must also set `WP_API_URL` and `PREVIEW_MODE` on the Workers side** — the local `.env` is only read at build time and does not reach the deployed Workers runtime. See "Cloudflare SSR manual verification checklist" below.
 
-## コンテンツモデル規約
+## Content model conventions
 
-新しいカスタム投稿タイプ(CPT)やカスタムフィールド(メタ)を追加する際は `wp/plugins/site-config` を参考にしてください。`work` CPT とその meta(`client_name` / `project_url`)がサンプル実装として入っています。
+Use `wp/plugins/site-config` as the reference when adding custom post types (CPTs) or custom fields (meta). It ships the `work` CPT and its meta (`client_name` / `project_url`) as a sample implementation.
 
-メタフィールドを登録する際は、必ず次のように `revisions_enabled: true` を付けて `register_post_meta()` を呼び出してください(WordPress 6.4 で導入された機能です)。
+Always register meta with `register_post_meta()` and `revisions_enabled: true` (introduced in WordPress 6.4):
 
 ```php
 register_post_meta( 'work', 'client_name', [
@@ -103,97 +105,97 @@ register_post_meta( 'work', 'client_name', [
 ] );
 ```
 
-この規約を守らないと、下書きや自動保存(オートセーブ)のプレビュー時に、そのメタだけが「最後に公開・保存された値」のまま表示されてしまいます(タイトルや本文はリビジョンとして正しくプレビューされるのに、メタだけ古い値が出るという不整合が起きます)。プレビューで確認したいカスタムフィールドは必ず `revisions_enabled: true` を付けて登録してください。
+Without it, previews of drafts and autosaves show that meta field with its last published/saved value — the title and body preview correctly as revisions while the meta lags behind. Register every custom field you want to check in previews with `revisions_enabled: true`.
 
-## ビルドと 2 層キャッシュ
+## Builds and the two-layer cache
 
-`pnpm build` は実行するたびに **フルの HTML を生成し直します**(差分ビルドではありません)。その代わりビルドを速くするために、2 つのキャッシュをリポジトリルートの `.cache/` に永続化しています。
+`pnpm build` **regenerates the full HTML every time** (it is not an incremental build). To keep builds fast, two caches are persisted under `.cache/` at the repository root:
 
-1. WordPress からのコンテンツ取得キャッシュ(`modified` 日時での差分取得)
-2. Astro 自体のビルドキャッシュ
+1. The WordPress content fetch cache (diff fetch keyed on `modified`)
+2. Astro's own build cache
 
-挙動が怪しいとき・コンテンツ取得キャッシュが原因かもしれないと疑ったときは、`NO_CACHE=1` を付けてフル取得させてください。
+If something looks off, or you suspect the content fetch cache, force a full fetch with `NO_CACHE=1`:
 
 ```bash
 NO_CACHE=1 pnpm build
 ```
 
-`NO_CACHE=1` が無効化するのはコンテンツ取得キャッシュのみで、Astro 側のビルドキャッシュ(`.cache/astro`)には影響しません。Astro 側も含めて完全にリセットしたい場合は、`.cache/` ディレクトリごと削除してください。
+`NO_CACHE=1` only bypasses the content fetch cache; Astro's build cache (`.cache/astro`) is untouched. To reset everything, including Astro's cache, delete the `.cache/` directory:
 
 ```bash
 rm -rf .cache
 ```
 
-なお、キャッシュの内部形式を変更するようなアップデートを取り込んだ場合は `CACHE_VERSION` の値がコード側で更新され、古い形式のキャッシュは自動的に全破棄される仕組みになっています。手動でキャッシュ形式の互換性を気にする必要はありません。
+When an update changes the cache's internal format, `CACHE_VERSION` is bumped in code and caches in the old format are wiped automatically. You never need to manage cache-format compatibility by hand.
 
-## 自動ビルド(webhook)
+## Automatic builds (webhook)
 
-WordPress で投稿を公開・更新・削除すると、自動的に GitHub Actions のビルド・デプロイが起動するようにできます。
+Publishing, updating, or deleting a post in WordPress can automatically trigger a GitHub Actions build and deploy.
 
-設定手順:
+Setup:
 
-1. WordPress 管理画面の「設定」→「Headless Bridge」を開く
-2. **GitHub Repository** に `owner/repo` 形式でリポジトリを指定
-3. **GitHub Token** に fine-grained PAT(パーソナルアクセストークン)を設定。このトークンは **対象リポジトリの `repository_dispatch` イベント送信のみ** を許可したスコープの狭いものにしてください(それ以上の権限は不要です)
+1. In the WordPress admin, open Settings → Headless Bridge
+2. Set **GitHub Repository** to `owner/repo`
+3. Set **GitHub Token** to a fine-grained personal access token (PAT). Keep its scope narrow: it **only needs permission to send `repository_dispatch` events to the target repository**
 
-投稿の公開・更新・削除をトリガーに GitHub へ `repository_dispatch` が送られ、`.github/workflows/build-deploy.yml` のワークフローが起動してビルド・デプロイが実行されます。GitHub Repository / GitHub Token のどちらかが未設定の場合は webhook 送信自体がスキップされます。設定の有無にかかわらず、Actions の `workflow_dispatch` からの手動起動はいつでも利用できます。
+On publish, update, or delete, a `repository_dispatch` is sent to GitHub, which starts the `.github/workflows/build-deploy.yml` workflow to build and deploy. If either GitHub Repository or GitHub Token is unset, the webhook is skipped. Manual runs via the Actions `workflow_dispatch` trigger are always available regardless of these settings.
 
-ビルド起動(GitHub API へのリクエスト)が失敗した場合は、WordPress 管理画面に「ビルドの起動に失敗しました」という通知が表示されます。公開したはずの内容がサイトに反映されていないと感じたら、まずこの通知の有無を確認してください。
+If triggering the build (the GitHub API request) fails, the WordPress admin shows a "failed to trigger build" notice. If published content doesn't appear on the site, check for this notice first.
 
-## デプロイ
+## Deployment
 
-静的サイトのデプロイ先は WordPress の設置場所と完全に独立しています。両者を結びつけるのは「ビルド時・プレビュー時に `WP_API_URL` へ HTTP アクセスできること」だけです。代表的な配置パターンは次の 3 つです。
+Where the static site is deployed is completely independent of where WordPress lives. The only link between them is that `WP_API_URL` must be reachable over HTTP at build and preview time. Three typical layouts:
 
-| パターン | 静的サイト | WordPress | 備考 |
+| Layout | Static site | WordPress | Notes |
 |---|---|---|---|
-| ① 同居・サブディレクトリ | `example.com/` | `example.com/wp/` | rsync の exclude 規約が必要 |
-| ② 同居・サブドメイン | `example.com` | `wp.example.com` | DocumentRoot が分離しているため exclude 不要。事故リスクが最小 |
-| ③ 完全分離 | レンタルサーバー A または Cloudflare | レンタルサーバー B(既存の WordPress サイトでも可) | 既存 WordPress サイトの表側だけを静的化する移行案件に有効 |
+| ① Co-located, subdirectory | `example.com/` | `example.com/wp/` | Requires the rsync exclude convention |
+| ② Co-located, subdomain | `example.com` | `wp.example.com` | Separate DocumentRoots, so no excludes needed. Lowest risk of accidents |
+| ③ Fully separate | Rental server A or Cloudflare | Rental server B (an existing WordPress site works too) | Good for migrations that make only the front end of an existing WordPress site static |
 
-### デプロイ設定
+### Deploy configuration
 
-`tools/deploy/deploy.config.example` をコピーして `tools/deploy/deploy.config`(gitignore 済み)を作成し、デプロイ先の情報を記入します。
+Copy `tools/deploy/deploy.config.example` to `tools/deploy/deploy.config` (gitignored) and fill in the target details:
 
 ```bash
 cp tools/deploy/deploy.config.example tools/deploy/deploy.config
 ```
 
-デプロイの実行はどのパターンでも共通のコマンドです。
+The deploy commands are the same for every layout:
 
 ```bash
 pnpm build
-pnpm site:preview               # 任意: デプロイ前にローカルでビルド結果を確認(astro preview)
-pnpm site:deploy                # 実際にデプロイ
-pnpm site:deploy -- --dry-run   # 実行内容を確認するだけ(何も送信しない)
+pnpm site:preview               # optional: check the build locally before deploying (astro preview)
+pnpm site:deploy                # deploy for real
+pnpm site:deploy -- --dry-run   # show what would happen without sending anything
 ```
 
-pnpm には組み込みの `pnpm deploy` コマンドがあるため、名前の衝突を避けて `site:deploy` という名前にしています。
+The script is named `site:deploy` to avoid clashing with pnpm's built-in `pnpm deploy` command.
 
-### rsync の特性と exclude
+### rsync behavior and excludes
 
-レンタルサーバー(SSH 接続可)へは `rsync -az --delete` による差分同期でデプロイします。差分同期のため、通信が途中で中断してもリモート側が壊れることはなく、単に一部の古いファイルが更新されずに残るだけです(再実行すれば追いつきます)。
+Rental servers with SSH access are deployed with `rsync -az --delete` (diff sync). Because it is a diff sync, an interrupted transfer never corrupts the remote — some old files are simply left un-updated, and re-running catches up.
 
-パターン①(同居・サブディレクトリ)のように WordPress 本体と静的サイトが同じドキュメントルートに同居する場合は、`deploy.config` の `RSYNC_EXCLUDES` から `wp/` と `.htaccess` を **絶対に外さないでください**。外してしまうと `--delete` オプションによって WordPress 本体や `.htaccess` ごと消えてしまいます。
+When WordPress and the static site share a document root (layout ①), **never remove `wp/` and `.htaccess` from `RSYNC_EXCLUDES` in `deploy.config`**. Without them, `--delete` wipes WordPress itself and `.htaccess`.
 
-SSH が使えないレンタルサーバー向けには `lftp` を使った FTPS(`DEPLOY_METHOD=lftp`)のフォールバックも用意しています。
+For rental servers without SSH, an FTPS fallback using `lftp` (`DEPLOY_METHOD=lftp`) is provided.
 
-### WordPress 管理画面の保護
+### Protecting the WordPress admin
 
-WordPress を静的サイトと同居させる構成では、`wp-login.php` / `wp-admin` を外部からの不要なアクセスから守ることを強く推奨します。`tools/deploy/htaccess-wp-admin.example` に雛形を用意していますが、これは **`wp-login.php` への Basic 認証を追加するだけの、保護の出発点となる雛形** です。`/wp-admin` 配下のすべてのパスを保護するものではなく、また REST API(`/wp-json/`)を素通しにするための分岐ロジックも含まれていません(雛形内の `SetEnvIf` 行は現状どこからも参照されておらず実際には効いていません)。本番運用では、この雛形をそのまま使うのではなく、レンタルサーバーのコントロールパネルが提供する IP アドレス制限やアクセス制限機能と組み合わせて、より確実な保護を行ってください。
+When WordPress is co-located with the static site, protecting `wp-login.php` / `wp-admin` from unwanted external access is strongly recommended. `tools/deploy/htaccess-wp-admin.example` provides a template, but it is **only a starting point that adds Basic auth to `wp-login.php`**. It does not protect every path under `/wp-admin`, and it has no branching logic to let the REST API (`/wp-json/`) through (the `SetEnvIf` line in the template is not referenced anywhere and currently has no effect). In production, don't use the template as-is — combine it with the IP restriction or access control features of your rental server's control panel for more reliable protection.
 
-## CI(GitHub Actions)
+## CI (GitHub Actions)
 
-`.github/workflows/build-deploy.yml` は `repository_dispatch`(webhook 経由)と `workflow_dispatch`(手動実行)の両方をトリガーにでき、ビルド後に設定に応じたデプロイ先へ配信します。手動実行時は「キャッシュを使わずフルビルド」するオプション(`NO_CACHE` 相当)も選べます。
+`.github/workflows/build-deploy.yml` can be triggered by both `repository_dispatch` (via the webhook) and `workflow_dispatch` (manual), and deploys the build to the configured target. Manual runs also offer a "full build without cache" option (equivalent to `NO_CACHE`).
 
-事前にリポジトリの Settings → Secrets and variables → Actions で、以下を登録してください。
+Register the following beforehand under the repository's Settings → Secrets and variables → Actions.
 
 **Variables**
 
-- `DEPLOY_TARGET`(`rental` または `cloudflare`)
-- `DEPLOY_METHOD`(`rsync` または `lftp`。rental のみ)
+- `DEPLOY_TARGET` (`rental` or `cloudflare`)
+- `DEPLOY_METHOD` (`rsync` or `lftp`; rental only)
 - `WP_API_URL`
-- `PREVIEW_MODE`(`shell` または `ssr`)
-- `CF_PAGES_PROJECT`(Cloudflare Pages のプロジェクト名)
+- `PREVIEW_MODE` (`shell` or `ssr`)
+- `CF_PAGES_PROJECT` (Cloudflare Pages project name)
 
 **Secrets**
 
@@ -201,36 +203,36 @@ WordPress を静的サイトと同居させる構成では、`wp-login.php` / `w
 - `FTP_HOST` / `FTP_USER` / `FTP_PASSWORD`
 - `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`
 
-ワークフローは `concurrency` グループで実行を 1 本化しており、ビルド中に新しい `repository_dispatch` が届くと実行中のジョブをキャンセルして最新の内容だけをビルド・デプロイします。連続して投稿を公開・更新しても、古いビルドが後から上書きしてしまう心配はありません。
+The workflow uses a `concurrency` group so only one run is active: if a new `repository_dispatch` arrives mid-build, the running job is cancelled and only the latest content is built and deployed. Publishing or updating posts in quick succession never lets an older build overwrite a newer one.
 
-## Cloudflare SSR の手動検証チェックリスト(初回デプロイ時)
+## Cloudflare SSR manual verification checklist (first deploy)
 
-`PREVIEW_MODE=ssr` で Cloudflare Workers にデプロイする場合、初回は次の手順を手動で確認してください。
+When deploying to Cloudflare Workers with `PREVIEW_MODE=ssr`, verify the following by hand the first time:
 
-1. `wrangler` にログインする(`pnpm --filter site exec wrangler login` など)
-2. `PREVIEW_MODE=ssr pnpm build` を実行し、SSR 用のビルド(`dist/server/` + `dist/client/`)を生成する
-3. `pnpm site:deploy` を実行し、`wrangler deploy` で Workers へデプロイする
-4. Cloudflare の Workers 側に環境変数 `WP_API_URL` と `PREVIEW_MODE=ssr` を設定する(ダッシュボードまたは `wrangler.jsonc` 等の設定ファイル経由。ローカルの `.env` は自動では伝わりません)
-5. WordPress の編集画面からプレビューを開き、Workers 上で正しく描画されることを確認する
-6. `headless-bridge` の設定にある **Frontend URL** を、本番の Cloudflare オリジン(例: `https://example.com`)に更新し、CORS 設定を本番向けに合わせる
+1. Log in to `wrangler` (e.g. `pnpm --filter site exec wrangler login`)
+2. Run `PREVIEW_MODE=ssr pnpm build` to produce the SSR build (`dist/server/` + `dist/client/`)
+3. Run `pnpm site:deploy` to deploy to Workers via `wrangler deploy`
+4. Set the `WP_API_URL` and `PREVIEW_MODE=ssr` environment variables on the Workers side (via the dashboard or a config file such as `wrangler.jsonc`; the local `.env` is not propagated automatically)
+5. Open a preview from the WordPress editor and confirm it renders correctly on Workers
+6. Update the **Frontend URL** in the `headless-bridge` settings to the production Cloudflare origin (e.g. `https://example.com`) so CORS matches production
 
-なお `PREVIEW_MODE=shell`(静的モード)の場合、ビルド出力は `dist/` 配下がそのまま静的ファイル一式になり、`wrangler pages deploy dist --project-name <CF_PAGES_PROJECT>` で Cloudflare Pages にデプロイされます。`dist/server/` が存在するかどうかで `tools/deploy/deploy.sh` が Workers 用/Pages 用のどちらのデプロイコマンドを使うか自動判別します。
+With `PREVIEW_MODE=shell` (static mode), the build output under `dist/` is the complete set of static files and is deployed to Cloudflare Pages with `wrangler pages deploy dist --project-name <CF_PAGES_PROJECT>`. `tools/deploy/deploy.sh` picks the Workers or Pages deploy command automatically based on whether `dist/server/` exists.
 
-## テスト
+## Testing
 
 ```bash
-pnpm test                                          # Vitest(リポジトリ全体)
-cd wp/plugins/headless-bridge && vendor/bin/phpunit # headless-bridge プラグインの PHP ユニットテスト
-bash tools/smoke/preview-endpoint.sh                # プレビューエンドポイントのスモークテスト
-pnpm e2e                                            # Playwright による E2E テスト
+pnpm test                                          # Vitest (whole repository)
+cd wp/plugins/headless-bridge && vendor/bin/phpunit # PHP unit tests for the headless-bridge plugin
+bash tools/smoke/preview-endpoint.sh                # smoke test for the preview endpoint
+pnpm e2e                                            # Playwright E2E tests
 ```
 
-E2E テストを初めて実行する前に、ブラウザバイナリのインストールが必要です。
+Before running the E2E tests for the first time, install the browser binary:
 
 ```bash
 npx playwright install --with-deps chromium
 ```
 
-## スケール上の注意
+## Scaling notes
 
-このボイラープレートは数百〜数千記事程度のサイトを想定した構成です。それを超える規模になる場合は、現状の「毎回フル HTML 生成」というビルド方式のままではビルド時間が課題になり得るため、キャッシュ戦略の強化(差分ビルドの導入)やコンテンツ取得の分割・並列化といった対応を検討してください。
+This boilerplate is designed for sites with a few hundred to a few thousand posts. Beyond that, the current "regenerate the full HTML every build" approach can make build times a problem; consider strengthening the caching strategy (introducing incremental builds) or splitting and parallelizing content fetching.
