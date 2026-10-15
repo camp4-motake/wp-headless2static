@@ -1,6 +1,6 @@
 # wp-headless2static
 
-Monorepo boilerplate: WordPress (headless CMS) + Astro static builds. Delivery pipeline complete (webhook → GitHub Actions → deploy). Detailed docs: `README.md` (Japanese). Design spec: `docs/superpowers/specs/2026-08-13-wp-headless2static-design.md`.
+Monorepo boilerplate: WordPress (headless CMS) + Astro static builds. Delivery pipeline complete (webhook → GitHub Actions → deploy). Detailed docs: `README.md` (Japanese).
 
 ## Layout
 
